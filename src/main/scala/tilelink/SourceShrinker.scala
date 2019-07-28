@@ -11,6 +11,7 @@ import scala.math.{min,max}
 class TLSourceShrinker(maxInFlight: Int)(implicit p: Parameters) extends LazyModule
 {
   require (maxInFlight > 0)
+  private def noShrinkRequired(client: TLClientPortParameters) = maxInFlight >= client.endSourceId
 
   // The SourceShrinker completely destroys all FIFO property guarantees
   private val client = TLClientParameters(
@@ -18,8 +19,12 @@ class TLSourceShrinker(maxInFlight: Int)(implicit p: Parameters) extends LazyMod
     sourceId = IdRange(0, maxInFlight))
   val node = TLAdapterNode(
     // We erase all client information since we crush the source Ids
-    clientFn  = { cp => TLClientPortParameters(clients = Seq(client.copy(requestFifo = cp.clients.exists(_.requestFifo)))) },
-    managerFn = { mp => mp.copy(managers = mp.managers.map(m => m.copy(fifoId = if (maxInFlight==1) Some(0) else m.fifoId)))  })
+    clientFn  = { cp =>
+      if (noShrinkRequired(cp)) { cp }
+      else  { TLClientPortParameters(clients = Seq(client.copy(requestFifo = cp.clients.exists(_.requestFifo)))) }
+    },
+    managerFn = { mp => mp.copy(managers = mp.managers.map(m => m.copy(fifoId = if (maxInFlight==1) Some(0) else m.fifoId)))
+    })
 
   lazy val module = new LazyModuleImp(this) {
     (node.in zip node.out) foreach { case ((in, edgeIn), (out, edgeOut)) =>
@@ -34,7 +39,7 @@ class TLSourceShrinker(maxInFlight: Int)(implicit p: Parameters) extends LazyMod
       in.c.ready := Bool(true)
       in.e.ready := Bool(true)
 
-      if (maxInFlight >= edgeIn.client.endSourceId) {
+      if (noShrinkRequired(edgeIn.client)) {
         out.a <> in.a
         in.d <> out.d
       } else {
