@@ -737,6 +737,14 @@ class FPU(cfg: FPUParams)(implicit p: Parameters) extends FPUModule()(p) {
     if (enableCommitLog)
       printf("f%d p%d 0x%x\n", load_wb_tag, load_wb_tag + 32, load_wb_data)
   }
+  val coreMonitorBundles = Wire(init = 0.U.asTypeOf(Vec(2, new CoreMonitorBundle(xLen))))
+  coreMonitorBundles(0).clock := clock
+  coreMonitorBundles(0).reset := reset
+  coreMonitorBundles(1).clock := clock
+  coreMonitorBundles(1).reset := reset
+  coreMonitorBundles(0).wrenf := load_wb
+  coreMonitorBundles(0).wrdst := load_wb_tag
+  coreMonitorBundles(0).wrdata := load_wb_data
 
   val ex_rs = ex_ra.map(a => regfile(a))
   when (io.valid) {
@@ -866,7 +874,10 @@ class FPU(cfg: FPUParams)(implicit p: Parameters) extends FPUModule()(p) {
     if (enableCommitLog) {
       printf("f%d p%d 0x%x\n", waddr, waddr + 32, ieee(wdata))
     }
+    coreMonitorBundles(1).wrenf := true.B
   }
+  coreMonitorBundles(1).wrdst := waddr
+  coreMonitorBundles(1).wrdata := ieee(wdata)
   when (wbInfo(0).cp && wen(0)) {
     io.cp_resp.bits.data := wdata
     io.cp_resp.valid := Bool(true)

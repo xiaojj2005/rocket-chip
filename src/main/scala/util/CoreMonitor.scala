@@ -29,5 +29,5 @@ class CoreMonitorBundle(val xLen: Int) extends Bundle with Clocked {
 
 // mark a module that has cores with CoreMonitorBundles
 trait HasCoreMonitorBundles {
-    def coreMonitorBundles: List[CoreMonitorBundle]
+  def coreMonitorBundles: List[CoreMonitorBundle]
 }

@@ -877,9 +877,9 @@ class Rocket(tile: RocketTile)(implicit p: Parameters) extends CoreModule()(p)
   coreMonitorBundle.timer := csr.io.time(31,0)
   coreMonitorBundle.valid := csr.io.trace(0).valid && !csr.io.trace(0).exception
   coreMonitorBundle.pc := csr.io.trace(0).iaddr(vaddrBitsExtended-1, 0).sextTo(xLen)
-  coreMonitorBundle.wrenx := wb_wen && !wb_set_sboard
+  coreMonitorBundle.wrenx := rf_wen && !(wb_wen && wb_set_sboard)
   coreMonitorBundle.wrenf := false.B
-  coreMonitorBundle.wrdst := wb_waddr
+  coreMonitorBundle.wrdst := rf_waddr
   coreMonitorBundle.wrdata := rf_wdata
   coreMonitorBundle.rd0src := wb_reg_inst(19,15)
   coreMonitorBundle.rd0val := Reg(next=Reg(next=ex_rs(0)))
@@ -918,16 +918,16 @@ class Rocket(tile: RocketTile)(implicit p: Parameters) extends CoreModule()(p)
   else {
     when (csr.io.trace(0).valid) {
       printf("C%d: %d [%d] pc=[%x] W[r%d=%x][%d] R[r%d=%x] R[r%d=%x] inst=[%x] DASM(%x)\n",
-         io.hartid, coreMonitorBundle.timer, coreMonitorBundle.valid,
-         coreMonitorBundle.pc,
-         Mux(wb_ctrl.wxd || wb_ctrl.wfd, coreMonitorBundle.wrdst, 0.U),
-         Mux(coreMonitorBundle.wrenx, coreMonitorBundle.wrdata, 0.U),
-         coreMonitorBundle.wrenx,
-         Mux(wb_ctrl.rxs1 || wb_ctrl.rfs1, coreMonitorBundle.rd0src, 0.U),
-         Mux(wb_ctrl.rxs1 || wb_ctrl.rfs1, coreMonitorBundle.rd0val, 0.U),
-         Mux(wb_ctrl.rxs2 || wb_ctrl.rfs2, coreMonitorBundle.rd1src, 0.U),
-         Mux(wb_ctrl.rxs2 || wb_ctrl.rfs2, coreMonitorBundle.rd1val, 0.U),
-         coreMonitorBundle.inst, coreMonitorBundle.inst)
+        io.hartid, coreMonitorBundle.timer, coreMonitorBundle.valid,
+        coreMonitorBundle.pc,
+        Mux(wb_ctrl.wxd || wb_ctrl.wfd, coreMonitorBundle.wrdst, 0.U),
+        Mux(coreMonitorBundle.wrenx, coreMonitorBundle.wrdata, 0.U),
+        coreMonitorBundle.wrenx,
+        Mux(wb_ctrl.rxs1 || wb_ctrl.rfs1, coreMonitorBundle.rd0src, 0.U),
+        Mux(wb_ctrl.rxs1 || wb_ctrl.rfs1, coreMonitorBundle.rd0val, 0.U),
+        Mux(wb_ctrl.rxs2 || wb_ctrl.rfs2, coreMonitorBundle.rd1src, 0.U),
+        Mux(wb_ctrl.rxs2 || wb_ctrl.rfs2, coreMonitorBundle.rd1val, 0.U),
+        coreMonitorBundle.inst, coreMonitorBundle.inst)
     }
   }
 

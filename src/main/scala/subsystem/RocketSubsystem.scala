@@ -11,6 +11,7 @@ import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.diplomaticobjectmodel.logicaltree._
 import freechips.rocketchip.diplomaticobjectmodel.model._
 import freechips.rocketchip.tile._
+import freechips.rocketchip.util.CoreMonitorBundle
 
 // TODO: how specific are these to RocketTiles?
 case class TileMasterPortParams(buffers: Int = 0, cork: Option[Boolean] = None)
@@ -54,9 +55,16 @@ trait HasRocketTiles extends HasTiles
       LogicalModuleTree.add(logicalTreeNode, r.rocketLogicalTree)
   }
 
-  def coreMonitorBundles = (rocketTiles map { t =>
-    t.module.core.rocketImpl.coreMonitorBundle
-  }).toList
+  def coreMonitorBundles: List[CoreMonitorBundle] = (rocketTiles map { t =>
+    Seq(t.module.core.rocketImpl.coreMonitorBundle) ++
+    t.module.fpuOpt.map { fpu => fpu.fpuImpl.coreMonitorBundles map { cmb => {
+      val coreMonitorBundle = Wire(init = cmb)
+      coreMonitorBundle.hartid    := t.module.core.rocketImpl.coreMonitorBundle.hartid
+      coreMonitorBundle.timer     := t.module.core.rocketImpl.coreMonitorBundle.timer
+      coreMonitorBundle.priv_mode := t.module.core.rocketImpl.coreMonitorBundle.priv_mode
+      coreMonitorBundle
+    }}}.toList.flatten
+  }).toList.flatten
 }
 
 trait HasRocketTilesModuleImp extends HasTilesModuleImp
