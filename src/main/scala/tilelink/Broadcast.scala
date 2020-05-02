@@ -5,6 +5,7 @@ package freechips.rocketchip.tilelink
 import Chisel.{defaultCompileOptions => _, _}
 import freechips.rocketchip.util.CompileOptions.NotStrictInferReset
 import freechips.rocketchip.config.Parameters
+import freechips.rocketchip.amba.{AMBAProtField, AMBAProt}
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.util._
 import scala.math.{min,max}
@@ -16,9 +17,11 @@ class TLBroadcast(lineBytes: Int, numTrackers: Int = 4, bufferless: Boolean = fa
 
   val node = TLAdapterNode(
     clientFn  = { cp =>
-      cp.v1copy(clients = Seq(TLMasterParameters.v1(
-        name     = "TLBroadcast",
-        sourceId = IdRange(0, 1 << log2Ceil(cp.endSourceId*4)))))
+      cp.v1copy(
+        clients = Seq(TLMasterParameters.v1(
+          name     = "TLBroadcast",
+          sourceId = IdRange(0, 1 << log2Ceil(cp.endSourceId*4)))),
+        requestFields = Seq(AMBAProtField()))
     },
     managerFn = { mp =>
       mp.v1copy(
@@ -314,6 +317,15 @@ class TLBroadcastTracker(id: Int, lineBytes: Int, probeCountBits: Int, bufferles
   io.out_a.bits.mask    := o_data.bits.mask
   io.out_a.bits.data    := o_data.bits.data
   io.out_a.bits.corrupt := Bool(false)
+  io.out_a.bits.user.lift(AMBAProt).foreach { x =>
+    x.bufferable := true.B
+    x.modifiable := true.B
+    x.readalloc  := true.B
+    x.writealloc := true.B
+    x.privileged := true.B
+    x.secure     := true.B
+    x.fetch      := false.B
+  }
 }
 
 object TLBroadcastConstants
